@@ -146,11 +146,12 @@ class HVAE(torch.nn.Module):
 
         self.criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
 
+        # just to know the device, we are working on (see the usage below)
         self.dummy_param = torch.nn.Parameter(torch.zeros([]))
 
-    # sampling from p
+    # sampling from p (decoder)
     def sample_p(self,
-                 bs : int) -> tuple:
+                 bs : int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         
         with torch.no_grad():
             z0 = (torch.rand([bs, self.nz0], device = self.dummy_param.device)>0.5).float()
@@ -158,9 +159,9 @@ class HVAE(torch.nn.Module):
             x = self.pnet1x(z0, z1).sigmoid().bernoulli().detach()
             return z0, z1, x
 
-    # sampling from q
+    # sampling from q (encoder)
     def sample_q(self,
-                 x : torch.Tensor) -> tuple:
+                 x : torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         
         with torch.no_grad():
             z1 = self.qnetx1(x).sigmoid().bernoulli().detach()
@@ -188,7 +189,7 @@ class HVAE(torch.nn.Module):
     def optimize_q(self,
                    z0_gt : torch.Tensor,
                    z1_gt : torch.Tensor,
-                   x_gt : torch.Tensor):
+                   x_gt : torch.Tensor) -> torch.Tensor:
         
         self.optimizer_q.zero_grad()
 
@@ -204,11 +205,14 @@ class HVAE(torch.nn.Module):
         return loss.detach()/(z0_gt.shape[1] + z1_gt.shape[1])
     
     def optimize(self,
-                 x : torch.Tensor,
-                 z0_o : torch.Tensor,
+                 x : torch.Tensor, # unsupervized (i.e. z0,z1 are not given) own real data
+                 z0_o : torch.Tensor, # fully supervized (z0,z1,x) synthetic data, None if no synthetic data
                  z1_o : torch.Tensor,
-                 x_o : torch.Tensor):
+                 x_o : torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
 
+        # Symmetric equilibrium learning:
+
+        # 1) sample from q (add synthetic supervized if any)
         z0, z1 = self.sample_q(x)
         if z0_o is None:
             z0l = z0
@@ -218,8 +222,11 @@ class HVAE(torch.nn.Module):
             z0l = torch.cat((z0, z0_o))
             z1l = torch.cat((z1, z1_o))
             xl = torch.cat((x, x_o))
+        
+        # 2) optimize p
         loss_p = self.optimize_p(z0l, z1l, xl)
 
+        # 3) sample from p (add synthetic supervized if any)
         z0, z1, x = self.sample_p(z0.shape[0])
         if z0_o is None:
             z0l = z0
@@ -229,10 +236,13 @@ class HVAE(torch.nn.Module):
             z0l = torch.cat((z0, z0_o))
             z1l = torch.cat((z1, z1_o))
             xl = torch.cat((x, x_o))
+
+        # 4) optimize q
         loss_q = self.optimize_q(z0l, z1l, xl)
 
         return loss_q.detach(), loss_p.detach()        
 
+    # just for vizualization, basically the same as "sample_p" but give only x-probabilities back
     def single_shot(self,
                     bs : int) -> torch.Tensor:
         
