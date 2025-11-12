@@ -33,7 +33,7 @@ if __name__ == '__main__':
     print('# Model: ', loadprot, flush=True)
 
     # prepare folders
-    os.makedirs('./generated_data/generated/')
+    os.makedirs('./generated_data/generated/', exist_ok=True)
     
     for b in range(nbatches):
 
