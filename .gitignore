@@ -5,3 +5,5 @@ logs
 models
 slurm
 launchers
+generated_data
+*.txt

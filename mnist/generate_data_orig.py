@@ -1,9 +1,7 @@
+import os
 import torch
 import torchvision.utils as vutils
 
-from hvae import HVAE
-
-from helpers import ensure_dir
 from mnist import MNIST
 
 # entry point, the main
@@ -18,8 +16,8 @@ if __name__ == '__main__':
     print('# Dataset loaded.', flush=True)
 
     # prepare folders
-    ensure_dir('./generated_data/origin1/first/')
-    ensure_dir('./generated_data/origin1/second/')
+    os.makedirs('./generated_data/origin1/first/', exist_ok=True)
+    os.makedirs('./generated_data/origin1/second/', exist_ok=True)
 
     print('0 to 4')
 
@@ -37,6 +35,8 @@ if __name__ == '__main__':
 
         print('.', flush=True, end='')
 
+    print()
+    
     print('5 to 9')
 
     xall = [mnist.x[i + 5] for i in range(5)]
