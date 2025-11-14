@@ -79,25 +79,31 @@ if __name__ == '__main__':
         # accumulation speed
         afactor = (1/(count + 1)) if count < 1000 else 0.001
         afactor1 = 1 - afactor
-        
+
+        # synthetic data
+        c_syn = []
+        x_syn = []
+        for j in range(n_models):                
+            c_o, x_o = j_models[j].generate(args.bs * 10)
+            c_syn += [c_o]
+            x_syn += [x_o]
+
         # learn
         for i in range(n_models): # loop over the models
-            # small 
+            # real data
             c, x = fmnist.get_train_w(i, device)
             x = x + torch.randn_like(x)*0.01
 
-            # synthetic data from others
-            c_syn = []
-            x_syn = []
+            # add synthetic data from others
+            c = [c]
+            x = [x]
             for j in range(n_models):
                 if j == i:
                     continue
-                
-                c_o, x_o = j_models[j].generate(args.bs * 10)
-                c_syn += [c_o]
-                x_syn += [x_o]
-            c = torch.cat(c_syn + [c])
-            x = torch.cat(x_syn + [x])
+                c += [c_syn[j]]
+                x += [x_syn[j]]
+            c = torch.cat(c)
+            x = torch.cat(x)
 
             lc, lx = j_models[i].optimize(c, x, symmetric=True)
             loss_c[i] = loss_c[i] * afactor1 + lc * afactor

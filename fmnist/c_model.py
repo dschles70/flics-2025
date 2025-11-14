@@ -17,15 +17,18 @@ class CModel(torch.nn.Module):
 
         self.dummy = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
 
-    def add_grad(self,
+    def optimize(self,
                  c : torch.Tensor,
                  x : torch.Tensor) -> torch.Tensor:
+
+        self.optimizer.zero_grad()
 
         scores = self.net(x)
         cind = torch.argmax(c, dim=1)
         loss = self.criterion(scores, cind).mean()
-
         loss.backward()
+
+        self.optimizer.step()
 
         return loss.detach()
 

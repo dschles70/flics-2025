@@ -22,26 +22,51 @@ class JModel(torch.nn.Module):
 
         self.dummy_param = torch.nn.Parameter(torch.empty(0), requires_grad=False)
 
+    # def optimize(self,
+    #              c_train : torch.Tensor,
+    #              x_train : torch.Tensor,
+    #              symmetric : bool) -> tuple[torch.Tensor, torch.Tensor]:
+
+    #     self.c_model.optimizer.zero_grad()
+    #     self.x_model.optimizer.zero_grad()
+        
+    #     # accumulate gradients (conditional likelihood)
+    #     loss_c = self.c_model.add_grad(c_train, x_train)
+    #     loss_x = self.x_model.add_grad(c_train, x_train)
+
+    #     if symmetric: # learn generatively
+    #         c_tmp = self.c_model.sample(x_train)
+    #         loss_x += self.x_model.add_grad(c_tmp, x_train)
+    #         x_tmp = self.x_model.sample(c_train)
+    #         loss_c += self.c_model.add_grad(c_train, x_tmp)
+
+    #     self.c_model.optimizer.step()
+    #     self.x_model.optimizer.step()
+
+    #     return loss_c, loss_x
+
     def optimize(self,
                  c_train : torch.Tensor,
                  x_train : torch.Tensor,
                  symmetric : bool) -> tuple[torch.Tensor, torch.Tensor]:
 
-        self.c_model.optimizer.zero_grad()
-        self.x_model.optimizer.zero_grad()
-        
-        # accumulate gradients (conditional likelihood)
-        loss_c = self.c_model.add_grad(c_train, x_train)
-        loss_x = self.x_model.add_grad(c_train, x_train)
+        if symmetric:
+            c = torch.cat((c_train, c_train))
+            x = torch.cat((x_train, self.x_model.sample(c_train)))
+        else:
+            c = c_train
+            x = x_train
 
-        if symmetric: # learn generatively
-            c_tmp = self.c_model.sample(x_train)
-            loss_x += self.x_model.add_grad(c_tmp, x_train)
-            x_tmp = self.x_model.sample(c_train)
-            loss_c += self.c_model.add_grad(c_train, x_tmp)
+        loss_c = self.c_model.optimize(c, x)
 
-        self.c_model.optimizer.step()
-        self.x_model.optimizer.step()
+        if symmetric:
+            c = torch.cat((c_train, self.c_model.sample(x_train)))
+            x = torch.cat((x_train, x_train))
+        else:
+            c = c_train
+            x = x_train
+
+        loss_x = self.x_model.optimize(c, x)
 
         return loss_c, loss_x
 

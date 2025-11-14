@@ -98,9 +98,11 @@ class XModel(torch.nn.Module):
         self.dummy = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
 
     # summetric learning, conditioned on c
-    def add_grad(self,
+    def optimize(self,
                  c : torch.Tensor,
                  x : torch.Tensor) -> torch.Tensor:
+
+        self.optimizer.zero_grad()
 
         # sample from q
         with torch.no_grad():
@@ -131,6 +133,8 @@ class XModel(torch.nn.Module):
         loss = pz1_loss + px_loss + qz1_loss + qz0_loss
 
         loss.backward()
+
+        self.optimizer.step()
 
         nz0 = pz0.shape[0]
         nz1 = pz1.shape[0]
