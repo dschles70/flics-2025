@@ -7,3 +7,4 @@ slurm
 launchers
 generated_data
 *.txt
+export
