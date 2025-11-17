@@ -16,7 +16,7 @@ from polymnist import POLYMNIST
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--call_prefix', required=True, help='Call prefix.')
+    parser.add_argument('--id', required=True, help='')
     parser.add_argument('--nz', type=int, required=True, help='')
 
     args = parser.parse_args()
@@ -46,13 +46,13 @@ if __name__ == '__main__':
     z_model = ZModel(nc, nd, nz, 0).to(device)
     s_model = SModel(nc, nd, nz, 0).to(device)
     
-    loadprot = load_model(c_model, './models/c_' + args.call_prefix + '.pt')
+    loadprot = load_model(c_model, './models/c_' + args.id + '.pt')
     print('c: ', loadprot, flush=True)
-    loadprot = load_model(d_model, './models/d_' + args.call_prefix + '.pt')
+    loadprot = load_model(d_model, './models/d_' + args.id + '.pt')
     print('d: ', loadprot, flush=True)
-    loadprot = load_model(z_model, './models/z_' + args.call_prefix + '.pt')
+    loadprot = load_model(z_model, './models/z_' + args.id + '.pt')
     print('z: ', loadprot, flush=True)
-    loadprot = load_model(s_model, './models/s_' + args.call_prefix + '.pt')
+    loadprot = load_model(s_model, './models/s_' + args.id + '.pt')
     print('s: ', loadprot, flush=True)
 
     print('Models loaded', flush=True)

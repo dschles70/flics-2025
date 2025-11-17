@@ -37,7 +37,7 @@ class ZModel(torch.nn.Module):
         self.net = ZNet(nc, nd, nz)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=step)
-        self.sheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=(lambda i: (100000 / (100000 + i))) )
+        # self.sheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=(lambda i: (100000 / (100000 + i))) )
         self.criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
 
         self.dummy_param = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
@@ -63,7 +63,7 @@ class ZModel(torch.nn.Module):
         loss.backward()
 
         self.optimizer.step()
-        self.sheduler.step()
+        # self.sheduler.step()
 
         return loss.detach() / self.nz
 

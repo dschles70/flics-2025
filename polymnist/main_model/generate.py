@@ -6,16 +6,20 @@ import torchvision.utils as vutils
 
 from helpers import load_model
 
+from d_model import DModel
 from z_model import ZModel
-from s_model import SModel
 from x_model import XModel
 from polymnist import POLYMNIST
+from cs_source import CSSOURCE
+
+from main import complete_cds
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--call_prefix', required=True, help='Call prefix.')
+    parser.add_argument('--id', required=True, help='Call prefix.')
     parser.add_argument('--ny', type=int, required=True, help='')
     parser.add_argument('--nz', type=int, required=True, help='')
+    parser.add_argument('--generator_path', default='', help='')
 
     args = parser.parse_args()
 
@@ -32,7 +36,10 @@ if __name__ == '__main__':
     ny = args.ny
     nz = args.nz
 
-    polymnist = POLYMNIST(100)
+    cs_source = CSSOURCE(1000, args.generator_path, device)
+    print('CSSource ready', flush=True)
+
+    polymnist = POLYMNIST(1000)
     print('POLYMNIST ready', flush=True)
 
     means = polymnist.means.to(device)
@@ -40,43 +47,42 @@ if __name__ == '__main__':
     iconst = (1 - 2 * means) / std
 
     # models
+    d_model = DModel(nc, nd, nz, 0, iconst).to(device)
     z_model = ZModel(nc, nd, nz, 0).to(device)
-    s_model = SModel(nc, nd, nz, 0).to(device)
     x_model = XModel(nc, nd, ny, nz, 0, iconst).to(device)
     
-    loadprot = load_model(z_model, './models/z_' + args.call_prefix + '.pt')
+    loadprot = load_model(d_model, './models/d_' + args.id + '.pt')
+    print('d: ', loadprot, flush=True)
+    loadprot = load_model(z_model, './models/z_' + args.id + '.pt')
     print('z: ', loadprot, flush=True)
-    loadprot = load_model(s_model, './models/s_' + args.call_prefix + '.pt')
-    print('s: ', loadprot, flush=True)
-    loadprot = load_model(x_model, './models/x_' + args.call_prefix + '.pt')
+    loadprot = load_model(x_model, './models/x_' + args.id + '.pt')
     print('x: ', loadprot, flush=True)
     print('Everything prepared, go ...', flush=True)
 
-    c = torch.zeros([50]).long()
-    d = torch.zeros([50]).long()
-    for i in range(50):
-        c[i] = i % 10
-        d[i] = i // 10
-    c = torch.nn.functional.one_hot(c, num_classes=10).float().to(device)
-    d = torch.nn.functional.one_hot(d, num_classes=5).float().to(device)
-
-    z = z_model.sample_random(50)
-    s = s_model.sample_random(50)
-    x = x_model.sample(c, d, z, s)
-    
-    for _ in range(1000):
-        for op in torch.randperm(3):
-            if op == 0:
-                z = z_model.sample(c, d, s, x)
-            elif op == 1:
-                s = s_model.sample(c, d, z, x)
-            else:
-                x = x_model.sample(c, d, z, s)
-                # x = x_model.reconstruct(c, d, z, s, x)
-
-    s = s_model.get_dec(c, d, z, x)
+    c, s = cs_source.get_train(device)
+    d = d_model.sample_random(1000)
+    z, x, _ = complete_cds(c, d, s, z_model, x_model)
     x = x_model.get_ms(c, d, z, s)[0] * std + means
-    # x = x_model.reconstruct(c, d, z, s, x) * std + means
-    vutils.save_image(x, './images/generated_' + args.call_prefix + '.png', nrow=10)
+
+    # sort out
+    x50 = torch.zeros([50,3,28,28], device=device)
+    for i in range(1000):
+        cc = torch.argmax(c[i])
+        dd = torch.argmax(d[i])
+        x50[dd * 10 + cc] = x[i]
+
+    vutils.save_image(x50, './images/generated_' + args.id + '.png', nrow=10)
+
+    # originals
+    c, d, x = polymnist.get_train(device)
+    x = x * std + means
+
+    x50 = torch.zeros([50,3,28,28], device=device)
+    for i in range(1000):
+        cc = torch.argmax(c[i])
+        dd = torch.argmax(d[i])
+        x50[dd * 10 + cc] = x[i]
+
+    vutils.save_image(x50, './images/original.png', nrow=10)
 
     print('Done.', flush=True)

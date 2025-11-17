@@ -42,7 +42,7 @@ class DModel(torch.nn.Module):
         self.net = DNet(nc, nd, nz, iconst)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=step)
-        self.sheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=(lambda i: (100000 / (100000 + i))) )
+        # self.sheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=(lambda i: (100000 / (100000 + i))) )
         self.criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
         self.dummy_param = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
@@ -61,7 +61,7 @@ class DModel(torch.nn.Module):
         loss.backward()
 
         self.optimizer.step()
-        self.sheduler.step()
+        # self.sheduler.step()
 
         return loss.detach()
 
