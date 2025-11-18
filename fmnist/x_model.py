@@ -97,7 +97,7 @@ class XModel(torch.nn.Module):
 
         self.dummy = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
 
-    # summetric learning, conditioned on c
+    # symmetric learning, conditioned on c
     def optimize(self,
                  c : torch.Tensor,
                  x : torch.Tensor) -> torch.Tensor:

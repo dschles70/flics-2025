@@ -20,4 +20,4 @@ ___
 In order to compute FID scores, quite many intermediate steps should be performed -- generating images from different models, computing FID scores between different subsets, etc. So, we packed everything in a shell script `fid_script.sh`, just call it. For generating images from learned models, `generate_data.py` is used; for computing FID scores, we used the code from [here](https://github.com/mseitzer/pytorch-fid). If everything goes smoothly, the script takes about 3 hours for computing all the necessary numbers. They are stored under `./fids/out*.txt`, which can be then plotted using `plot_fids.ipynb`, producing a figure like Fig. 1 (bottom) in the paper.
 ___
 
-The training scripts `main*.py` produce the folder `./data` where the original dataset is downloaded. The script `fid_script.sh` stores generated images under `./generated_data`. Both can be safely removed after the work is done.
+The training scripts `main*.py` create the folder `./data` where the original dataset is downloaded. The script `fid_script.sh` stores generated images under `./generated_data`. Both can be safely removed after the work is done.
