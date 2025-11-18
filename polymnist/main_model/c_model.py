@@ -1,6 +1,14 @@
 import torch
 from nets import EncoderS
 
+# c -- digit
+# d -- style
+# z -- latent
+# s -- segmentation (binarized MNIST)
+# x -- images (PolyMNIST)
+
+# below is implementation for p(c|d, z, s, x)
+
 class CNet(torch.nn.Module):
 
     def __init__(self,
@@ -37,7 +45,6 @@ class CModel(torch.nn.Module):
         self.net = CNet(nc, nd, nz)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=step)
-        # self.sheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=(lambda i: (100000 / (100000 + i))) )
         self.criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
         self.dummy_param = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
@@ -56,7 +63,6 @@ class CModel(torch.nn.Module):
         loss.backward()
 
         self.optimizer.step()
-        # self.sheduler.step()
 
         return loss.detach()
 

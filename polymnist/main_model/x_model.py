@@ -1,6 +1,17 @@
 import torch
 from nets import EncoderS, Decoder
 
+# c -- digit
+# d -- style
+# z -- latent
+# s -- segmentation (binarized MNIST)
+# x -- images (PolyMNIST)
+
+# below is implementation for p(x | c, d, z, s)
+# it is a conditional VAE with its own continuous latent variables, called y
+# it learned by optimizing the conditional ELBO, like in the standard VAEs
+
+# "calibration loss", should only prevent model degeneration
 def cal(y):
     with torch.no_grad():
         mean = y.mean(0, keepdim=True)
@@ -10,6 +21,7 @@ def cal(y):
 
     return (y - y_norm) ** 2
 
+# p(y | c, d, z)
 class XPrior(torch.nn.Module):
     def __init__(self,
                  nc : int,
@@ -36,6 +48,7 @@ class XPrior(torch.nn.Module):
          mu, lsigma = torch.chunk(scores, 2, dim=1)
          return mu, lsigma
 
+# q(y | c, d, z, s, x)
 class XEncoder(torch.nn.Module):
     def __init__(self,
                  nc : int,
@@ -62,6 +75,7 @@ class XEncoder(torch.nn.Module):
          mu, lsigma = torch.chunk(scores, 2, dim=1)
          return mu, lsigma
 
+# p(x | c, d, y, z, s)
 class XDecoder(torch.nn.Module):
     def __init__(self,
                  nc : int,
@@ -89,6 +103,7 @@ class XDecoder(torch.nn.Module):
 
          return mu, lsigma
 
+# combines the above components
 class XModel(torch.nn.Module):
 
     def __init__(self,
@@ -108,7 +123,6 @@ class XModel(torch.nn.Module):
         self.prior = XPrior(nc, nd, ny, nz)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=step)
-        # self.sheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=(lambda i: (100000 / (100000 + i))) )
 
         self.dummy_param = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
 
@@ -118,8 +132,9 @@ class XModel(torch.nn.Module):
                  z : torch.Tensor,
                  s : torch.Tensor,
                  x : torch.Tensor,
-                 l : torch.Tensor) -> tuple:
+                 l : torch.Tensor) -> torch.Tensor:
 
+        # filter out those examples, where x was just sampled (expected gradient should be zero)        
         c = c[l!=2]
         d = d[l!=2]
         z = z[l!=2]
@@ -153,7 +168,6 @@ class XModel(torch.nn.Module):
         loss.backward()
 
         self.optimizer.step()
-        # self.sheduler.step()
 
         return loss.detach() / (28 * 28 * 3 + self.ny)
 
@@ -176,7 +190,7 @@ class XModel(torch.nn.Module):
                c : torch.Tensor,
                d : torch.Tensor,
                z : torch.Tensor,
-               s : torch.Tensor) -> torch.Tensor:
+               s : torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
 
         with torch.no_grad():
             mu, lsigma = self.prior(c, d, z)
@@ -186,6 +200,7 @@ class XModel(torch.nn.Module):
             sigma = torch.exp(lsigma)
             return mu.detach(), sigma.detach()
 
+    # just for visualization
     def reconstruct(self,
                     c : torch.Tensor,
                     d : torch.Tensor,

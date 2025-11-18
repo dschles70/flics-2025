@@ -15,6 +15,12 @@ from x_model import XModel
 from polymnist import POLYMNIST
 from cs_source import CSSOURCE
 
+# c -- digit
+# d -- style
+# z -- latent
+# s -- segmentation (binarized MNIST)
+# x -- images (PolyMNIST)
+
 def complete_cdx(
         c : torch.Tensor,
         d : torch.Tensor,
@@ -73,6 +79,7 @@ def complete_cds(
 
     return z, x, l
 
+# run Gibbs sampling with clamped x, accumulate frequencies
 def inference(
         x : torch.Tensor,
         c_model : CModel,
@@ -81,6 +88,8 @@ def inference(
         s_model : SModel):
     
     with torch.no_grad():
+
+        # init random
         bs = x.shape[0]
         c = c_model.sample_random(bs)
         d = d_model.sample_random(bs)
@@ -195,6 +204,7 @@ if __name__ == '__main__':
     c_acc_val = torch.ones([], device=device) / nc
     d_acc_val = torch.ones([], device=device) / nd
 
+    # stationary (limiting) samples to visualize
     c_sta = c_model.sample_random(12)
     d_sta = d_model.sample_random(12)
     z_sta = z_model.sample_random(12)
@@ -221,6 +231,7 @@ if __name__ == '__main__':
         x = torch.cat((x0, x1))
         l = torch.cat((l0, l1))
 
+        # learn
         c_loss = c_loss * afactor1 + c_model.optimize(c, d, z, s, x) * afactor
         d_loss = d_loss * afactor1 + d_model.optimize(c, d, z, s, x) * afactor
         z_loss = z_loss * afactor1 + z_model.optimize(c, d, z, s, x, l) * afactor
@@ -249,6 +260,7 @@ if __name__ == '__main__':
             afactor = (1/(count1 + 1)) if count1 < 10 else 0.1
             afactor1 = 1 - afactor
 
+            # perform inference
             c_inf, d_inf, x_inf = polymnist.get_train(device)
             c_inf = torch.argmax(c_inf, dim=1)
             d_inf = torch.argmax(d_inf, dim=1)
@@ -263,6 +275,7 @@ if __name__ == '__main__':
             c_acc_val = c_acc_val*afactor1 + (c_inf==c_dec).float().mean()*afactor
             d_acc_val = d_acc_val*afactor1 + (d_inf==d_dec).float().mean()*afactor
 
+            # print out the log
             strtoprint = 'time: ' + str(time.time()-time0) + ' count: ' + str(count)
 
             strtoprint += ' clen: ' + str(vlen(c_model).cpu().numpy())
@@ -288,6 +301,7 @@ if __name__ == '__main__':
 
         # once awhile save the models for further use
         if count % save_period == 0:
+            # save the models
             print('# Saving models ...', file=open(logname, 'a'), flush=True)
             save_model(c_model, './models/c_' + args.id + '.pt')
             save_model(d_model, './models/d_' + args.id + '.pt')

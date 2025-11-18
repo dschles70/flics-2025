@@ -2,6 +2,9 @@ import torch
 import numpy as np
 import pickle
 
+# Note, the files polymnist-train.pck and polymnist-test.pck should be prepared in advance
+# see README-s
+
 class POLYMNIST():
     def __init__(self,
                  bs : int):

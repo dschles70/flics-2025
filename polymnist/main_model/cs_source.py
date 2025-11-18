@@ -1,10 +1,11 @@
 import torch
 from mnist import MNIST
 
+# this is a wrapper for either real or synthetic MNIST-like samples
 class CSSOURCE():
     def __init__(self,
                  bs : int,
-                 generator_path : str,
+                 generator_path : str, # if empty, real MNIST
                  device : int):
         
         self.bs = bs

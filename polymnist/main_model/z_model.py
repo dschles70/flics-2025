@@ -1,6 +1,14 @@
 import torch
 from nets import EncoderS
 
+# c -- digit
+# d -- style
+# z -- latent
+# s -- segmentation (binarized MNIST)
+# x -- images (PolyMNIST)
+
+# below is implementation for p(z|c, d, s, x)
+
 class ZNet(torch.nn.Module):
 
     def __init__(self,
@@ -37,7 +45,6 @@ class ZModel(torch.nn.Module):
         self.net = ZNet(nc, nd, nz)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=step)
-        # self.sheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=(lambda i: (100000 / (100000 + i))) )
         self.criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
 
         self.dummy_param = torch.nn.Parameter(torch.zeros([]), requires_grad=False)
@@ -49,7 +56,8 @@ class ZModel(torch.nn.Module):
                  s : torch.Tensor,
                  x : torch.Tensor,
                  l : torch.Tensor) -> tuple:
-        
+
+        # filter out those examples, where z was just sampled (expected gradient should be zero)        
         c = c[l!=0]
         d = d[l!=0]
         z = z[l!=0]
@@ -63,7 +71,6 @@ class ZModel(torch.nn.Module):
         loss.backward()
 
         self.optimizer.step()
-        # self.sheduler.step()
 
         return loss.detach() / self.nz
 
